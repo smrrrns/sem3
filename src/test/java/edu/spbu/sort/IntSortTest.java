@@ -35,7 +35,7 @@ public class IntSortTest
   public void testSortArray() throws Exception {
     int array[] = generateRandomIntArray(ARRAY_SIZE, SEED);
 
-    IntSort.sort(array);
+    IntSort.sort(array,0,array.length-1);
 
     // проверяем правильность сортировки
     int previousValue = Integer.MIN_VALUE;
@@ -58,7 +58,7 @@ public class IntSortTest
     IntSort.sort(list);
     long estimatedTime = System.nanoTime() - startTime;
     System.out.println("Execution time(ms) " + (estimatedTime/ 1000000));
-
+    System.out.println(list);
     // проверяем правильность сортировки
     int previousValue = Integer.MIN_VALUE;
     for (int i = 0; i < list.size() ; i++) {

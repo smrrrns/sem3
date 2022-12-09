@@ -5,6 +5,20 @@ package edu.spbu.matrix;
  */
 public interface Matrix
 {
+
+  public void displayMatrix();
+
+  /**
+   * @return количество строк
+   */
+  int getHigh();
+
+  /**
+   * @return количество столбцов
+   */
+  //int getWidth();
+
+
   /**
    * однопоточное умнджение матриц
    * должно поддерживаться для всех 4-х вариантов
