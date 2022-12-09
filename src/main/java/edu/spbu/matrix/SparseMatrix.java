@@ -11,8 +11,6 @@ public class SparseMatrix implements Matrix
   private HashMap<Integer,HashMap<Integer, Double>> data;
   private long hash = 0;
 
-
-
   /**
    * загружает матрицу из файла
    * @param fileName

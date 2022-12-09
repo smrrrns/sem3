@@ -211,8 +211,6 @@ public class DenseMatrix implements Matrix {
             }
         }
         return this;
-
-
     }
 
     /**
