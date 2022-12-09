@@ -8,6 +8,8 @@ public interface Matrix
 
   public void displayMatrix();
 
+  long hashCode(double a, int b, int c);
+
   /**
    * @return количество строк
    */

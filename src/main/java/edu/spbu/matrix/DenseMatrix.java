@@ -79,11 +79,11 @@ public class DenseMatrix implements Matrix {
     /**
      * создание пустой матрицы размера high*wide
      * @param high количество строк
-     * @param wide количество столбцов
+     * @param width количество столбцов
      */
-    public DenseMatrix(int high, int wide) {
-        this.data = new double[high][wide];
-        this.width = wide;
+    public DenseMatrix(int high, int width) {
+        this.data = new double[high][width];
+        this.width = width;
         this.high = high;
     }
 
@@ -117,7 +117,8 @@ public class DenseMatrix implements Matrix {
      * @param c номер столбца
      * @return хэшкод
      */
-    public long hashCode(double a, double b, double c){
+    @Override
+    public long hashCode(double a, int b, int c){
         return  (long) (a * b * c);
     }
 
@@ -127,9 +128,9 @@ public class DenseMatrix implements Matrix {
     public void displayMatrix() {
         for (int i = 0; i < this.high; i++) {
             for (int j = 0; j < this.width; j++) {
-                System.out.print(data[i][j] + " ");
+                System.out.print(this.data[i][j] + " ");
             }
-            System.out.print('\n');
+            System.out.println();
         }
     }
 
