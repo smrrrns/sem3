@@ -37,9 +37,11 @@ public class DenseMatrix implements Matrix {
                 this.width = rows.get(0).split("\\s").length;
 
                 double[][] data = new double[this.high][this.width];
+                String[] number;
                 for (int i = 0; i < this.high; i++) {
+                    number = rows.get(i).split("\\s");
                     for (int j = 0; j < this.width; j++) {
-                        data[i][j] = Double.parseDouble(rows.get(i).split("\\s")[j]);
+                        data[i][j] = Double.parseDouble(number[j]);
                         this.hash += hashCode(data[i][j], i, j);
                     }
                 }
@@ -239,8 +241,8 @@ public class DenseMatrix implements Matrix {
         //m.displayMatrix();
 
         DenseMatrix matrix1 = new DenseMatrix("m1.txt");
-        DenseMatrix matrix2 = new DenseMatrix("m2.txt");
-        matrix1.mul(matrix2).displayMatrix();
+        //DenseMatrix matrix2 = new DenseMatrix("m2.txt");
+        matrix1.displayMatrix();
 
     }
 }
