@@ -1,6 +1,7 @@
 package edu.spbu.matrix;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Scanner;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -11,15 +12,17 @@ import java.io.IOException;
  */
 public class DenseMatrix implements Matrix {
     private final int width, high;
-    private final double[][] data;
-    private long hash = 0;
+    private double[][] data;
+    public long hash = 0;
+
+    private static final String path = "C://Users//Sonya//IdeaProjects//sem3/";
 
     /**
      * чтение матрицы из файла
      * @param fileName имя файла
      */
     public DenseMatrix(String fileName) {
-        Path file = Paths.get("C://matrix files/" + fileName);
+        Path file = Paths.get(path + fileName);
 
         try (Scanner obj = new Scanner(file)) {
             ArrayList<String> rows = new ArrayList<>();
@@ -37,11 +40,10 @@ public class DenseMatrix implements Matrix {
                 this.width = rows.get(0).split("\\s").length;
 
                 double[][] data = new double[this.high][this.width];
-                String[] number;
                 for (int i = 0; i < this.high; i++) {
-                    number = rows.get(i).split("\\s");
+                    String [] numbers = rows.get(i).split("\\s");
                     for (int j = 0; j < this.width; j++) {
-                        data[i][j] = Double.parseDouble(number[j]);
+                        data[i][j] = Double.parseDouble(numbers[j]);
                         this.hash += hashCode(data[i][j], i, j);
                     }
                 }
@@ -208,10 +210,11 @@ public class DenseMatrix implements Matrix {
      */
     @Override
     public Matrix mul(Matrix m) {
-        if(m instanceof DenseMatrix){
-            if(this.width == m.getHigh()){
+        if(this.width == m.getHigh()){
+            if(m instanceof DenseMatrix)
                 return this.mulDd((DenseMatrix)m);
-            }
+            else if(m instanceof SparseMatrix)
+                return (((SparseMatrix)m).transposeMatrix().mulSd(this.transposeMatrix())).transposedMatrix();
         }
         return this;
     }
@@ -227,12 +230,99 @@ public class DenseMatrix implements Matrix {
         return null;
     }
 
+    public boolean matrixCompare(Matrix m) {
+        if (m instanceof DenseMatrix) {
+            if (((DenseMatrix) m).hash != this.hash || ((DenseMatrix) m).high != this.high || ((DenseMatrix) m).width != this.width)
+                return false;
+            else {
+                for (int i = 0; i < this.high; i++) {
+                    for (int j = 0; j < this.width; j++) {
+                        if (((DenseMatrix) m).data[i][j] != this.data[i][j]) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+        else if (m instanceof SparseMatrix) {
+            if (((SparseMatrix) m).getHash() != this.hash || ((SparseMatrix) m).getHigh() != this.high || ((SparseMatrix) m).getWidth() != this.width)
+                return false;
+            else {
+                for (int i = 0; i < this.high; i++) {
+                    for (int j = 0; j < this.width; j++) {
+                        if (((SparseMatrix) m).getElem(i,j) != this.data[i][j]) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+
+        }
+        else
+            throw new NullPointerException("parameter type is wrong");
+        //return false;
+
+    }
+
+    public static boolean ifDense(String file){
+        Path file1 = Paths.get(path + file);
+
+        try (Scanner obj = new Scanner(file1)) {
+            ArrayList<String> rows = new ArrayList<>();
+
+            while (obj.hasNextLine())
+                rows.add(obj.nextLine());
+
+            if( rows.size() == 0 || rows.get(0).split("\\s").length == 0){
+                throw new NullPointerException("null matrix");
+            }
+            else {
+                int zeros = 0;
+                int nums = 0;
+                //int h = rows.size();
+                int w = rows.get(0).split("\\s").length;
+
+                //double[][] data = new double[high][width];
+                for (String row : rows) {
+                    String[] numbers = row.split("\\s");
+                    for (int j = 0; j < w; j++) {
+                        if (Double.parseDouble(numbers[j]) == 0)
+                            zeros += 1;
+                        else nums += 1;
+                    }
+                }
+                return nums > zeros;
+
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
     /**
      * сравнивает с обоими вариантами
      */
     @Override
     public boolean equals(Object o) {
-        return false;
+        if(o instanceof String){
+            if(ifDense((String) o))
+            {DenseMatrix dM = new DenseMatrix((String) o);
+                return this.matrixCompare(dM);
+            }
+            else
+            {SparseMatrix sM = new SparseMatrix((String) o);
+                return this.matrixCompare(sM);
+            }
+        }
+        else if(o instanceof DenseMatrix)
+            return this.matrixCompare((DenseMatrix)o);
+
+        else if(o instanceof SparseMatrix)
+            return this.matrixCompare((SparseMatrix)o);
+
+        else throw new NullPointerException("object type is wrong");
+
     }
 
     public static void main(String[] args) {
@@ -240,9 +330,13 @@ public class DenseMatrix implements Matrix {
         // m.addElem(1, 1, 2.5);
         //m.displayMatrix();
 
+        //DenseMatrix matrix1 = new DenseMatrix("m1.txt");
+        //SparseMatrix matrix2 = new SparseMatrix("m2.txt");
+        //matrix2.mul(matrix1).displayMatrix();
+        //matrix1.displayMatrix();
         DenseMatrix matrix1 = new DenseMatrix("m1.txt");
-        //DenseMatrix matrix2 = new DenseMatrix("m2.txt");
-        matrix1.displayMatrix();
+        DenseMatrix matrix2 = new DenseMatrix("m2.txt");
+        System.out.println(matrix1.equals(matrix2));
 
     }
 }

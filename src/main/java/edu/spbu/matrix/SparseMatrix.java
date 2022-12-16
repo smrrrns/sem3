@@ -1,5 +1,7 @@
 package edu.spbu.matrix;
 
+import edu.spbu.MatrixGenerator;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -22,7 +24,7 @@ public class SparseMatrix implements Matrix
    * @param fileName
    */
   public SparseMatrix(String fileName) {
-    Path file = Paths.get("C://matrix files/" + fileName);
+    Path file = Paths.get("C://Users//Sonya//IdeaProjects//sem3/" + fileName);
 
     try (Scanner obj = new Scanner(file)) {
       ArrayList<String> rows = new ArrayList<>();
@@ -106,6 +108,13 @@ public class SparseMatrix implements Matrix
     return this.width;
   }
 
+  public long getHash(){
+      return this.hash;
+  }
+
+  public HashMap<Integer,HashMap<Integer, Double>> getData(){
+      return this.data;
+  }
   public void displayMatrix(){
     if(this.data != null) {
       for (int i = 0; i < this.high; ++i) {
@@ -118,7 +127,7 @@ public class SparseMatrix implements Matrix
                   //System.out.print((j+1) +": "+  (numbers.get(j)) + " ");
           }
         }
-        System.out.println();
+          System.out.println();
       }
     }
     else System.out.println("matrix is emty");
@@ -163,7 +172,6 @@ public class SparseMatrix implements Matrix
       SparseMatrix transposedM = m.transposeMatrix();
 
         for (Integer i: this.data.keySet()){
-
             for (Integer j:  transposedM.data.keySet()){
                 double sum = 0;
                 for (Integer k: this.data.get(i).keySet()) {
@@ -172,12 +180,41 @@ public class SparseMatrix implements Matrix
 
                     res.data.putIfAbsent(i, new HashMap<Integer, Double>());
                     res.addElem(i,j, sum);
-                //res.hash += hashCode(res.data.get(i).get(j), i,j);
+                res.hash += hashCode(res.getElem(i,j), i,j);
             }
         }
         return res;
 
     }return null;
+  }
+
+
+
+
+
+  public SparseMatrix mulSd(DenseMatrix m){
+      if(m != null){
+          SparseMatrix res = new SparseMatrix(this.high,m.getWidth());
+          HashMap<Integer, HashMap<Integer, Double>> data = new HashMap<>();
+          DenseMatrix transposedM = m.transposeMatrix();
+
+          for (Integer i: this.data.keySet()){
+              for (int j = 0; j < transposedM.getWidth(); j++){
+                  double sum = 0;
+                  for (Integer k: this.data.get(i).keySet()) {
+                      sum += this.getElem(i, k) * transposedM.getElem(j, k);
+                  }
+
+                  res.data.putIfAbsent(i, new HashMap<>());
+                  res.addElem(i,j, sum);
+                  res.hash += hashCode(res.getElem(i,j), i,j);
+              }
+          }
+          return res;
+
+      }
+
+      return null;
   }
 
   /**
@@ -189,9 +226,11 @@ public class SparseMatrix implements Matrix
    */
   @Override public Matrix mul(Matrix m)
   {
-    if(m instanceof SparseMatrix){
-      if(this.width == m.getHigh())
+      if(this.width == m.getHigh()){
+    if(m instanceof SparseMatrix)
         return this.mulSs((SparseMatrix)m);
+    else if(m instanceof DenseMatrix)
+        return this.mulSd((DenseMatrix) m);
     }
     return null;
   }
@@ -213,17 +252,24 @@ public class SparseMatrix implements Matrix
    * @return
    */
   @Override public boolean equals(Object o) {
+
     return false;
   }
 
-  public static void main(String[] args) {
-      SparseMatrix sMatr1 = new SparseMatrix("m1.txt");
-      SparseMatrix sMatr2 = new SparseMatrix("m2.txt");
+  public static void main(String[] args) throws IOException {
+      //SparseMatrix sMatr1 = new SparseMatrix("m3.txt");
+      //SparseMatrix sMatr2 = new SparseMatrix("m2.txt");
       //sMatr.addElem(1,2, 24.8);
       //double elem = sMatr.getElem(1,0);
       //System.out.println(elem);
-      SparseMatrix m = sMatr1.mulSs(sMatr2);
-      m.displayMatrix();
+      //SparseMatrix m = sMatr1.mulSs(sMatr2);
+      //m.displayMatrix();
+      new MatrixGenerator(1,2, "Sparse.txt", 7).generate();
+      new MatrixGenerator(2, 1,"Dense.txt", 7).generate();
+      SparseMatrix sM = new SparseMatrix("Sparse.txt");
+      DenseMatrix dM = new DenseMatrix("Dense.txt");
+      sM.mul(dM).displayMatrix();
+
       //sMatr2.transposedMatrix().displayMatrix();
       //System.out.println(sMatr1.data.get(1).keySet());
   }

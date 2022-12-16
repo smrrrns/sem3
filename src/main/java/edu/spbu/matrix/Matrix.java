@@ -8,6 +8,9 @@ public interface Matrix
 
   public void displayMatrix();
 
+  //public SparseMatrix transposeM(SparseMatrix m);
+  //public DenseMatrix transposeM(DenseMatrix m);
+
   long hashCode(double a, int b, int c);
 
   /**
