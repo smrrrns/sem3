@@ -2,6 +2,8 @@ package edu.spbu.matrix;
 
 import edu.spbu.MatrixGenerator;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -9,6 +11,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+
+import static edu.spbu.matrix.DenseMatrix.ifDense;
 
 /**
  * Разряженная матрица
@@ -18,13 +22,15 @@ public class SparseMatrix implements Matrix
   private int high, width;
   private HashMap<Integer,HashMap<Integer, Double>> data;
   private long hash = 0;
+    private final double DELTA = 0.001;
+    private static final String path = "C://Users//Соня Смирнова//IdeaProjects/java-template/";
 
   /**
    * загружает матрицу из файла
    * @param fileName
    */
   public SparseMatrix(String fileName) {
-    Path file = Paths.get("C://Users//Sonya//IdeaProjects//sem3/" + fileName);
+    Path file = Paths.get(path + fileName);
 
     try (Scanner obj = new Scanner(file)) {
       ArrayList<String> rows = new ArrayList<>();
@@ -97,14 +103,15 @@ public class SparseMatrix implements Matrix
 
   @Override
   public long hashCode(double a, int b, int c) {
-    return  (long) (a * b * c);
+    return  (long) (a * Math.pow(2,b) * Math.pow(3,c));
   }
 
   public int getHigh(){
   return this.high;
   }
 
-  public int getWidth(){
+
+    public int getWidth(){
     return this.width;
   }
 
@@ -180,7 +187,7 @@ public class SparseMatrix implements Matrix
 
                     res.data.putIfAbsent(i, new HashMap<Integer, Double>());
                     res.addElem(i,j, sum);
-                res.hash += hashCode(res.getElem(i,j), i,j);
+                //res.hash += hashCode(res.getElem(i,j), i,j);
             }
         }
         return res;
@@ -207,7 +214,7 @@ public class SparseMatrix implements Matrix
 
                   res.data.putIfAbsent(i, new HashMap<>());
                   res.addElem(i,j, sum);
-                  res.hash += hashCode(res.getElem(i,j), i,j);
+
               }
           }
           return res;
@@ -216,8 +223,30 @@ public class SparseMatrix implements Matrix
 
       return null;
   }
+    public void writeMatrix(String fName) throws IOException {
+        BufferedWriter out = new BufferedWriter(new FileWriter(fName));
+        for (int i = 0; i < this.high; ++i) {
+            HashMap<Integer, Double> line = this.data.get(i);
+            if (line != null) {
+                for (int j = 0; j < this.width; ++j) {
+                    if (line.containsKey(j)) out.write(Double.toString(line.get(j)));
+                    else out.write("0");
+                    out.write(" ");
+                }
+            }
+            else {
+                for (int j = 0; j < this.width; ++j) {
+                    out.write("0 ");
+                }
+            }
+            out.write('\n');
+        }
+        out.flush();
+        out.close();
+    }
 
-  /**
+
+    /**
    * однопоточное умножение матриц
    * должно поддерживаться для всех 4-х вариантов
    *
@@ -246,14 +275,50 @@ public class SparseMatrix implements Matrix
     return null;
   }
 
-  /**
+    public boolean matrixCompare(Matrix m) {
+        if (m instanceof SparseMatrix) {
+            if (((SparseMatrix) m).getHash() != this.hash || ((SparseMatrix) m).getHigh() != this.high || ((SparseMatrix) m).getWidth() != this.width)
+                return false;
+            else {
+                for (int i = 0; i < this.high; i++) {
+                    for (int j = 0; j < this.width; j++) {
+                        if (Math.abs(((SparseMatrix) m).getElem(i, j) - this.getElem(i, j)) > DELTA ) {
+                            System.out.println("Elements on place [" + i + ", " + j + "] - " +
+                                    this.getElem(i,j) + " and " + ((SparseMatrix) m).getElem(i, j) + " are not equal");
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+        }
+
+        else
+            return false;
+
+    }
+
+
+    /**
    * сравнивает с обоими вариантами
    * @param o
    * @return
    */
   @Override public boolean equals(Object o) {
+      if(o instanceof String){
+          if(!ifDense((String) o))
+          {SparseMatrix sM = new SparseMatrix((String) o);
+              return this.matrixCompare(sM);
+          }
+          else
+              return false;
+      }
+      else if(o instanceof SparseMatrix)
+          return this.matrixCompare((SparseMatrix)o);
+      else if(o instanceof DenseMatrix)
+          return false;
+      else throw new NullPointerException("object type is wrong");
 
-    return false;
   }
 
   public static void main(String[] args) throws IOException {
@@ -264,13 +329,13 @@ public class SparseMatrix implements Matrix
       //System.out.println(elem);
       //SparseMatrix m = sMatr1.mulSs(sMatr2);
       //m.displayMatrix();
-      new MatrixGenerator(1,2, "Sparse.txt", 7).generate();
-      new MatrixGenerator(2, 1,"Dense.txt", 7).generate();
-      SparseMatrix sM = new SparseMatrix("Sparse.txt");
-      DenseMatrix dM = new DenseMatrix("Dense.txt");
-      sM.mul(dM).displayMatrix();
-
+      new MatrixGenerator(7,5, "SparseBig1.txt", 2000).generate();
+      //new MatrixGenerator(2, 5,"Dense.txt", 7).generate();
+      SparseMatrix sM1 = new SparseMatrix("SparseBig1.txt");
+      SparseMatrix sM2 = new SparseMatrix("SparseBig.txt");
+      //Matrix sMres = sM1.mul(sM2);
+      System.out.print(sM1.equals(sM2));
       //sMatr2.transposedMatrix().displayMatrix();
-      //System.out.println(sMatr1.data.get(1).keySet());
+      //sMres.writeMatrix("SSRes.txt");
   }
 }

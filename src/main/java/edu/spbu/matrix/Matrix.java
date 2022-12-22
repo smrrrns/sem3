@@ -1,5 +1,7 @@
 package edu.spbu.matrix;
 
+import java.io.IOException;
+
 /**
  *
  */
@@ -17,6 +19,8 @@ public interface Matrix
    * @return количество строк
    */
   int getHigh();
+
+  public void writeMatrix(String fName) throws IOException;
 
   /**
    * @return количество столбцов
