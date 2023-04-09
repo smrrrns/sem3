@@ -19,13 +19,18 @@ public interface Matrix
    * @return количество строк
    */
   int getHigh();
+  int getWidth();
+
+  double getElem(int i, int j);
+  void addElem(int high, int width, double num);
 
   public void writeMatrix(String fName) throws IOException;
 
   /**
    * @return количество столбцов
    */
-  //int getWidth();
+
+
 
   /**
    * однопоточное умнджение матриц
@@ -42,4 +47,8 @@ public interface Matrix
    */
   Matrix dmul(Matrix o);
 
+  boolean matrixCompare(Matrix m);
+
+
+  Matrix transposeMatrix();
 }

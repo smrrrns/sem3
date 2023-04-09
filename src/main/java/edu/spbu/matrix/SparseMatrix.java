@@ -9,25 +9,24 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
+
 import java.util.Scanner;
 
-import static edu.spbu.matrix.DenseMatrix.ifDense;
 
 /**
  * Разряженная матрица
  */
 public class SparseMatrix implements Matrix
 {
-  private int high, width;
-  private HashMap<Integer,HashMap<Integer, Double>> data;
-  private long hash = 0;
-    private final double DELTA = 0.001;
+  private final int high;
+    private final int width;
+  public HashMap<Integer,HashMap<Integer, Double>> data;
+  public long hash = 0;
     private static final String path = "C://Users//Соня Смирнова//IdeaProjects/java-template/";
 
   /**
    * загружает матрицу из файла
-   * @param fileName
+   * @param fileName имя файла
    */
   public SparseMatrix(String fileName) {
     Path file = Paths.get(path + fileName);
@@ -82,7 +81,8 @@ public class SparseMatrix implements Matrix
     if (num != 0){
       if(high >= 0 && width >= 0
               && high <= this.high && width <= this.width) {
-      if (!this.data.containsKey(high)) this.data.put(high, new HashMap<Integer, Double>());
+      if (!this.data.containsKey(high)) this.data.put(high, new HashMap<>());
+      this.data.putIfAbsent(high, new HashMap<>());
       this.data.get(high).put(width, num);
       this.hash += hashCode(num, high, width);
     }
@@ -115,13 +115,9 @@ public class SparseMatrix implements Matrix
     return this.width;
   }
 
-  public long getHash(){
-      return this.hash;
-  }
 
-  public HashMap<Integer,HashMap<Integer, Double>> getData(){
-      return this.data;
-  }
+
+
   public void displayMatrix(){
     if(this.data != null) {
       for (int i = 0; i < this.high; ++i) {
@@ -148,7 +144,7 @@ public class SparseMatrix implements Matrix
       for (Integer i: this.data.keySet()) {
         for (Integer j : this.data.get(i).keySet()) {
             //if (!data.containsKey(j)) data.put(j, new HashMap<Integer, Double>());
-            data.putIfAbsent(j, new HashMap<Integer, Double>());
+            data.putIfAbsent(j, new HashMap<>());
             data.get(j).put(i, this.getElem(i,j));
         }
       }
@@ -159,23 +155,22 @@ public class SparseMatrix implements Matrix
     else return this;
   }
 
-    public SparseMatrix transposedMatrix() {
-        if (this.data != null) {
-            SparseMatrix res = new SparseMatrix(this.width, this.high);
-            for (Map.Entry<Integer, HashMap<Integer, Double>> line: this.data.entrySet()) {
-                for (Map.Entry<Integer, Double> elem: line.getValue().entrySet()) {
-                    res.addElem(elem.getKey(), line.getKey(), elem.getValue());
-                }
-            }
-            return res;
-        }
-        return this;
-    }
+//    public SparseMatrix transposedMatrix() {
+//        if (this.data != null) {
+//            SparseMatrix res = new SparseMatrix(this.width, this.high);
+//            for (Map.Entry<Integer, HashMap<Integer, Double>> line: this.data.entrySet()) {
+//                for (Map.Entry<Integer, Double> elem: line.getValue().entrySet()) {
+//                    res.addElem(elem.getKey(), line.getKey(), elem.getValue());
+//                }
+//            }
+//            return res;
+//        }
+//        return this;
+//    }
 
   public SparseMatrix mulSs(SparseMatrix m){
     if(m != null){
       SparseMatrix res = new SparseMatrix(this.high,m.width);
-      HashMap<Integer, HashMap<Integer, Double>> data = new HashMap<>();
       SparseMatrix transposedM = m.transposeMatrix();
 
         for (Integer i: this.data.keySet()){
@@ -185,9 +180,9 @@ public class SparseMatrix implements Matrix
                     sum += this.getElem(i, k) * transposedM.getElem(j, k);
                 }
 
-                    res.data.putIfAbsent(i, new HashMap<Integer, Double>());
+                    res.data.putIfAbsent(i, new HashMap<>());
                     res.addElem(i,j, sum);
-                //res.hash += hashCode(res.getElem(i,j), i,j);
+
             }
         }
         return res;
@@ -202,7 +197,7 @@ public class SparseMatrix implements Matrix
   public SparseMatrix mulSd(DenseMatrix m){
       if(m != null){
           SparseMatrix res = new SparseMatrix(this.high,m.getWidth());
-          HashMap<Integer, HashMap<Integer, Double>> data = new HashMap<>();
+          //HashMap<Integer, HashMap<Integer, Double>> data = new HashMap<>();
           DenseMatrix transposedM = m.transposeMatrix();
 
           for (Integer i: this.data.keySet()){
@@ -250,8 +245,8 @@ public class SparseMatrix implements Matrix
    * однопоточное умножение матриц
    * должно поддерживаться для всех 4-х вариантов
    *
-   * @param m
-   * @return
+   * @param m матрица
+   * @return результат умножения матриц
    */
   @Override public Matrix mul(Matrix m)
   {
@@ -267,24 +262,67 @@ public class SparseMatrix implements Matrix
   /**
    * многопоточное умножение матриц
    *
-   * @param o
-   * @return
+   * @param m матрица
+   * @param threadCount количество потоков
+   * @return результат умножения матриц
    */
-  @Override public Matrix dmul(Matrix o)
+
+  public Matrix threadMulSS(SparseMatrix m, int threadCount)
   {
+      assert threadCount > 0;
+
+      int rowCount = this.high;
+      int colCount = m.width;
+      SparseMatrix result = new SparseMatrix(rowCount,colCount);
+
+      int cells = (rowCount * colCount) / threadCount;  // число вычисляемых ячеек на поток
+      int first = 0;  // индекс первой вычисляемой ячейки
+      final MultiplierThread[] multiplierThreads = new MultiplierThread[threadCount];  // массив потоков.
+
+      // создание и запуск потоков.
+      for (int i = threadCount - 1; i >= 0; --i) {
+          int last = first + cells;  // индекс последней вычисляемой ячейки.
+          if (i == 0) {
+              last = rowCount * colCount;
+          }
+          multiplierThreads[i] = new MultiplierThread(this, m, result, first, last);
+          multiplierThreads[i].start();
+          first = last;
+      }
+
+      try {
+          for (MultiplierThread t : multiplierThreads)
+              t.join();
+      }
+      catch (InterruptedException e) {
+          e.printStackTrace();
+      }
+
+      return result;
+  }
+
+  @Override public Matrix dmul(Matrix m)
+  {
+      if(m instanceof SparseMatrix)
+          return this.threadMulSS((SparseMatrix)m, Runtime.getRuntime().availableProcessors());
+      else if(m instanceof DenseMatrix)
+      return (((DenseMatrix)m).transposeMatrix().threadMulDS(this.transposeMatrix(),Runtime.getRuntime().availableProcessors())).transposeMatrix();
+      
     return null;
   }
 
+
+
     public boolean matrixCompare(Matrix m) {
         if (m instanceof SparseMatrix) {
-            if (((SparseMatrix) m).getHash() != this.hash || ((SparseMatrix) m).getHigh() != this.high || ((SparseMatrix) m).getWidth() != this.width)
-                return false;
+            if ( m.getHigh() != this.high ||  m.getWidth() != this.width){
+                return false;}
             else {
                 for (int i = 0; i < this.high; i++) {
                     for (int j = 0; j < this.width; j++) {
-                        if (Math.abs(((SparseMatrix) m).getElem(i, j) - this.getElem(i, j)) > DELTA ) {
+                        if ( m.getElem(i, j) != this.getElem(i, j)) {
                             System.out.println("Elements on place [" + i + ", " + j + "] - " +
-                                    this.getElem(i,j) + " and " + ((SparseMatrix) m).getElem(i, j) + " are not equal");
+                                    this.getElem(i,j) + " and " + m.getElem(i, j) + " are not equal");
                             return false;
                         }
                     }
@@ -301,19 +339,11 @@ public class SparseMatrix implements Matrix
 
     /**
    * сравнивает с обоими вариантами
-   * @param o
-   * @return
+   * @param o матрица
+   * @return true ot false
    */
   @Override public boolean equals(Object o) {
-      if(o instanceof String){
-          if(!ifDense((String) o))
-          {SparseMatrix sM = new SparseMatrix((String) o);
-              return this.matrixCompare(sM);
-          }
-          else
-              return false;
-      }
-      else if(o instanceof SparseMatrix)
+     if(o instanceof SparseMatrix)
           return this.matrixCompare((SparseMatrix)o);
       else if(o instanceof DenseMatrix)
           return false;
@@ -329,12 +359,35 @@ public class SparseMatrix implements Matrix
       //System.out.println(elem);
       //SparseMatrix m = sMatr1.mulSs(sMatr2);
       //m.displayMatrix();
-      new MatrixGenerator(7,5, "SparseBig1.txt", 2000).generate();
-      //new MatrixGenerator(2, 5,"Dense.txt", 7).generate();
-      SparseMatrix sM1 = new SparseMatrix("SparseBig1.txt");
-      SparseMatrix sM2 = new SparseMatrix("SparseBig.txt");
-      //Matrix sMres = sM1.mul(sM2);
-      System.out.print(sM1.equals(sM2));
+//     new MatrixGenerator(1,4, "mS1000_1.txt", 1000).generate();
+//      new MatrixGenerator(2, 5,"mS1000_2.txt", 1000).generate();
+//      new MatrixGenerator(3, 1,"mD1000.txt", 1000).generate();
+      SparseMatrix sM1 = new SparseMatrix("sm1000_1.txt");
+      SparseMatrix sM2 = new SparseMatrix("sm1000_2.txt");
+      //DenseMatrix dM = new DenseMatrix("mD1000.txt");
+
+//      Matrix ssresMT = sM1.dmul(sM2);
+//      Matrix ssres = sM1.mul(sM2);
+
+      Matrix sdres = sM1.mul(sM2);
+      sdres.writeMatrix("ss1000resm.txt");
+
+      Matrix sdresMT = sM1.dmul(sM2);
+      sdresMT.writeMatrix("ss1000resdm.txt");
+
+      //System.out.print(ssresMT.equals(ssres));
+      //System.out.print(sdresMT.matrixCompare(sdres));
+
+      for (int row = 0; row < 1000; ++row) {
+          for (int col = 0; col < 1000; col++) {
+
+              if (sdresMT.getElem(row,col) != sdres.getElem(row,col)) {
+                  System.out.println("Error in multithreaded calculation!" + " "+  row + " " + col + " " + sdresMT.getElem(row,col) + " " + sdres.getElem(row,col));
+                    return;
+              }
+          }
+      }
+
       //sMatr2.transposedMatrix().displayMatrix();
       //sMres.writeMatrix("SSRes.txt");
   }

@@ -6,8 +6,8 @@ import java.io.FileNotFoundException;
 
 public class MatrixPerfTest
 {
-  public static final String MATRIX1_NAME = "m1.txt";
-  public static final String MATRIX2_NAME = "m2.txt";
+  public static final String MATRIX1_NAME = "bigSparse500_1.txt";
+  public static final String MATRIX2_NAME = "bigSparse500_2.txt";
 
   public static void main(String s[])  {
 

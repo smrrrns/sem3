@@ -1,11 +1,9 @@
 package edu.spbu.matrix;
 
 import edu.spbu.MatrixGenerator;
-
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Scanner;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,8 +13,8 @@ import java.io.IOException;
  * Плотная матрица
  */
 public class DenseMatrix implements Matrix {
-    private final int width, high;
-    private double[][] data;
+    final int width, high;
+    double[][] data;
     public long hash = 0;
 
     private static final String path = "C://Users//Соня Смирнова//IdeaProjects/java-template/";
@@ -194,10 +192,11 @@ public class DenseMatrix implements Matrix {
 
             for (int i = 0; i < res.high; i++){
                 for (int j = 0; j < res.width; j++){
-                    for (int k = 0; k < m.high ; k++){
-                        res.data[i][j] += this.data[i][k]*transposedM.data[j][k];
+                    for (int k = 0; k < m.high ; k++) {
+                        res.data[i][j] += this.data[i][k] * transposedM.data[j][k];
+
                     }
-                    res.hash += hashCode(res.data[i][j], i,j);
+                    res.hash += hashCode(res.data[i][j], i, j);
                 }
             }
             return res;
@@ -218,7 +217,7 @@ public class DenseMatrix implements Matrix {
             if(m instanceof DenseMatrix)
                 return this.mulDd((DenseMatrix)m);
             else if(m instanceof SparseMatrix)
-                return (((SparseMatrix)m).transposeMatrix().mulSd(this.transposeMatrix())).transposedMatrix();
+                return (((SparseMatrix)m).transposeMatrix().mulSd(this.transposeMatrix())).transposeMatrix();
         }
         return this;
     }
@@ -231,17 +230,104 @@ public class DenseMatrix implements Matrix {
      */
     @Override
     public Matrix dmul(Matrix m) {
-        return null;
+        if(m instanceof DenseMatrix) return this.threadMulDD((DenseMatrix)m, Runtime.getRuntime().availableProcessors());
+        else if(m instanceof SparseMatrix) return this.threadMulDS((SparseMatrix)m, Runtime.getRuntime().availableProcessors());
+        else return null;
     }
+
+    /** Многопоточное умножение матриц.
+     *
+     * @param m  Первая (левая) матрица.
+     * @param threadCount Число потоков.
+     * @return Результирующая матрица.
+     */
+    public Matrix threadMulDD(DenseMatrix m, int threadCount)
+    {
+        assert threadCount > 0;
+
+        int rowCount = this.high;             // Число строк результирующей матрицы.
+        int colCount = m.width;         // Число столбцов результирующей матрицы.
+        DenseMatrix result = new DenseMatrix(rowCount,colCount);  // Результирующая матрица.
+
+        int cells = (rowCount * colCount) / threadCount;  // Число вычисляемых ячеек на поток.
+        int first = 0;  // Индекс первой вычисляемой ячейки.
+        final MultiplierThread[] multiplierThreads = new MultiplierThread[threadCount];  // Массив потоков.
+
+        // Создание и запуск потоков.
+        for (int i = threadCount - 1; i >= 0; --i) {
+            int last = first + cells;  // Индекс последней вычисляемой ячейки.
+            if (i == 0) {
+                /* Один из потоков должен будет вычислить не только свой блок ячеек,
+                   но и остаток, если число ячеек не делится нацело на число потоков. */
+                last = rowCount * colCount;
+            }
+            multiplierThreads[i] = new MultiplierThread(this, m, result, first, last);
+            multiplierThreads[i].start();
+            first = last;
+        }
+
+        // Ожидание завершения потоков.
+        try {
+            for (MultiplierThread t : multiplierThreads)
+                t.join();
+        }
+        catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return result;
+    }
+
+    public Matrix threadMulDS(SparseMatrix m, int threadCount)
+    {
+        assert threadCount > 0;
+
+        int rowCount = this.high;             // Число строк результирующей матрицы.
+        int colCount = m.getWidth();         // Число столбцов результирующей матрицы.
+        DenseMatrix result = new DenseMatrix(rowCount,colCount);  // Результирующая матрица.
+
+        int cells = (rowCount * colCount) / threadCount;  // Число вычисляемых ячеек на поток.
+        int first = 0;  // Индекс первой вычисляемой ячейки.
+        final MultiplierThread[] multiplierThreads = new MultiplierThread[threadCount];  // Массив потоков.
+
+        // Создание и запуск потоков.
+        for (int i = threadCount - 1; i >= 0; --i) {
+            int last = first + cells;  // Индекс последней вычисляемой ячейки.
+            if (i == 0) {
+                /* Один из потоков должен будет вычислить не только свой блок ячеек,
+                   но и остаток, если число ячеек не делится нацело на число потоков. */
+                last = rowCount * colCount;
+            }
+            multiplierThreads[i] = new MultiplierThread(this, m, result, first, last);
+            multiplierThreads[i].start();
+            first = last;
+        }
+
+        // Ожидание завершения потоков.
+        try {
+            for (MultiplierThread t : multiplierThreads)
+                t.join();
+        }
+        catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return result;
+    }
+
 
     public boolean matrixCompare(Matrix m) {
         if (m instanceof DenseMatrix) {
-            if (((DenseMatrix) m).hash != this.hash || ((DenseMatrix) m).high != this.high || ((DenseMatrix) m).width != this.width)
+            if (((DenseMatrix) m).high != this.high || ((DenseMatrix) m).width != this.width){
+                System.out.println("(((");
                 return false;
+            }
+
             else {
                 for (int i = 0; i < this.high; i++) {
                     for (int j = 0; j < this.width; j++) {
                         if (((DenseMatrix) m).data[i][j] != this.data[i][j]) {
+                            System.out.println(")))");
                             return false;
                         }
                     }
@@ -249,10 +335,15 @@ public class DenseMatrix implements Matrix {
             }
             return true;
         }
+        else if(m instanceof SparseMatrix){
+           return false;
 
-        else
+        }
+
+        else {
+            System.out.println("what..");
             return false;
-
+        }
     }
 
     public static boolean ifDense(String file){
@@ -291,6 +382,9 @@ public class DenseMatrix implements Matrix {
     /**
      * сравнивает с обоими вариантами
      */
+
+
+
     @Override
     public boolean equals(Object o) {
         if(o instanceof String){
@@ -306,7 +400,8 @@ public class DenseMatrix implements Matrix {
 
         else if(o instanceof SparseMatrix)
             return false;
-
+        else if(o instanceof Matrix)
+            return false;
         else throw new NullPointerException("object type is wrong");
 
     }
@@ -328,14 +423,34 @@ public class DenseMatrix implements Matrix {
         //DenseMatrix m = new DenseMatrix(3, 4);
         // m.addElem(1, 1, 2.5);
         //m.displayMatrix();
-        //new MatrixGenerator(2, 1,"DenseBig.txt", 2000).generate();
-        //new MatrixGenerator(2, 5,"SparseBig.txt", 2000).generate();
-        DenseMatrix dense = new DenseMatrix("DenseBig.txt");
-        SparseMatrix sparse = new SparseMatrix("SparseBig.txt");
-        Matrix res = sparse.mul(dense);
-        res.writeMatrix("sparseDenseRes.txt");
-        //SparseMatrix m2 = new SparseMatrix("SparseBig.txt");
+        new MatrixGenerator(0, 6,"sm1000_1.txt", 1000).generate();
+        new MatrixGenerator(1, 6,"sm1000_2.txt", 1000).generate();
+        DenseMatrix m1 = new DenseMatrix("sm1000_1.txt");
+        DenseMatrix m2 = new DenseMatrix("sm1000_2.txt");
+        //SparseMatrix m2 = new SparseMatrix("sm1000.txt");
+        long startTime = System.nanoTime();
 
+
+        Matrix res2 = m1.dmul(m2);
+        long estimatedTime = System.nanoTime() - startTime;
+        System.out.println("Execution time(ms) " + (estimatedTime/ 1000000));
+
+
+        Matrix res1 = m1.mul(m2);
+        res1.writeMatrix("ss1000resm.txt");
+
+        res2.writeMatrix("ss1000resdm.txt");
+
+        //System.out.println(res1.matrixCompare(res2));
+        for (int row = 0; row < 1000; ++row) {
+            for (int col = 0; col < 1000; col++) {
+
+                if (res2.getElem(row,col) != res1.getElem(row,col)) {
+                    System.out.println("Error in multithreaded calculation!" + " "+  row + " " + col + " " + res2.getElem(row,col) + " " + res1.getElem(row,col));
+
+                }
+            }
+        }
 
 
     }
